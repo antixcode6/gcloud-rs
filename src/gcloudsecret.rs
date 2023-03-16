@@ -2,7 +2,7 @@ use gcloud_sdk::google::cloud::secretmanager::v1::secret_manager_service_client:
 use gcloud_sdk::google::cloud::secretmanager::v1::ListSecretsRequest;
 use gcloud_sdk::*;
 
-pub(crate) async fn vault() -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) async fn vault_client() -> Result<GoogleApi<SecretManagerServiceClient<GoogleAuthMiddleware>>, Box<dyn std::error::Error>> {
     // Debug logging
     let subscriber = tracing_subscriber::fmt()
         .with_env_filter("gcloud_sdk=debug")
@@ -23,15 +23,5 @@ pub(crate) async fn vault() -> Result<(), Box<dyn std::error::Error>> {
         )
         .await?;
 
-    let response = secrets_client
-        .get()
-        .list_secrets(tonic::Request::new(ListSecretsRequest {
-            parent: format!("projects/{}", google_project_id),
-            ..Default::default()
-        }))
-        .await?;
-    println!("Response: {:?}", response);
-
-    Ok(())
-
+    Ok(secrets_client)
 }
