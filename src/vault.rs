@@ -28,12 +28,13 @@ pub async fn list_vault(
 //insert secret
 pub async fn insert(
     client: GoogleApi<SecretManagerServiceClient<GoogleAuthMiddleware>>,
+    secret_name: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let google_project_id: String = GoogleEnvironment::detect_google_project_id().await.expect("No Google Project ID detected. Please specify it explicitly using env variable: PROJECT_ID");
 
     // this fucking sucks
     let secrets = Some(Secret {
-        name: "test".to_string(),
+        name: secret_name,
         replication: Some(Replication {
             replication: Option::Some(
                 gcloud_sdk::google::cloud::secretmanager::v1::replication::Replication::Automatic(
