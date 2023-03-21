@@ -3,6 +3,7 @@ use gcloud_sdk::{
         replication::Automatic, secret_manager_service_client::SecretManagerServiceClient,
         AddSecretVersionRequest, CreateSecretRequest, ListSecretsRequest, Replication, Secret,
     },
+    proto_ext::secretmanager::SecretPayload,
     GoogleApi, GoogleAuthMiddleware, GoogleEnvironment,
 };
 use std::collections::HashMap;
@@ -21,7 +22,7 @@ pub async fn list_vault(
             ..Default::default()
         }))
         .await?;
-    println!("Response: {:?}", response);
+    println!("Response: {:#?}", response);
     Ok(())
 }
 
@@ -32,6 +33,7 @@ pub async fn insert(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let google_project_id: String = GoogleEnvironment::detect_google_project_id().await.expect("No Google Project ID detected. Please specify it explicitly using env variable: PROJECT_ID");
 
+    let secret_insertion = secret_name.clone();
     // this fucking sucks
     let secrets = Some(Secret {
         name: secret_name,
@@ -58,21 +60,35 @@ pub async fn insert(
         .get()
         .create_secret(tonic::Request::new(CreateSecretRequest {
             parent: format!("projects/{}", google_project_id),
-            secret_id: format!("TestSecret-RS"),
+            secret_id: format!("{}", secret_insertion),
             secret: secrets,
         }))
         .await?;
-    println!("Response: {:?}", response);
+    println!("Response: {:#?}", response);
 
-    let _version =
-        client
-            .clone()
-            .get()
-            .add_secret_version(tonic::Request::new(AddSecretVersionRequest {
-                parent: format!("TestSecret-RS"),
-                payload: todo!(),
-            }));
-    //println!("Response: {:?}", version);
+    Ok(())
+}
+
+pub async fn version(
+    client: GoogleApi<SecretManagerServiceClient<GoogleAuthMiddleware>>,
+    secret_name: String,
+    secret_value: String
+) -> Result<(), Box<dyn std::error::Error>> {
+    let google_project_id: String = GoogleEnvironment::detect_google_project_id().await.expect("No Google Project ID detected. Please specify it explicitly using env variable: PROJECT_ID");
+    let pp = SecretPayload {
+        data: secret_value.into(),
+        data_crc32c: None,
+    };
+
+    let version = client
+        .clone()
+        .get()
+        .add_secret_version(tonic::Request::new(AddSecretVersionRequest {
+            parent: format!("projects/{}/secrets/{}", google_project_id, secret_name),
+            payload: Some(pp),
+        }))
+        .await?;
+    println!("Response: {:#?}", version);
 
     Ok(())
 }

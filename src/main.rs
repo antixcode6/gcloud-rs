@@ -12,6 +12,10 @@ struct Args {
     #[arg(short, long, default_value = "")]
     secret: String,
 
+    /// Value of the secret you create
+    #[arg(short, long, default_value = "")]
+    value: String,
+
     /// Profile to use (test, dev, prod)
     #[arg(short, long, default_value = "")]
     profile: String,
@@ -19,6 +23,11 @@ struct Args {
     /// list secrets in an account
     #[arg(short, long, default_value_t = false)]
     list: bool,
+
+    // list secrets in an account
+    // todo: update secrets in place
+    //#[arg(short, long, default_value_t = false)]
+    //update: bool,
 }
 #[tokio::main]
 async fn main() {
@@ -36,11 +45,18 @@ async fn main() {
     }
 
     if args.secret != "" {
-        let client2 = cli_client.client.clone();
+        let client_insert = cli_client.client.clone();
+        let client_version = cli_client.client.clone();
+        let version_secret = args.secret.clone();
 
-        match vault::insert(client2, args.secret).await {
+        match vault::insert(client_insert, args.secret).await {
             Ok(result) => result,
             Err(error) => panic!("Failed to create gcloud secret: {}", error),
+        }
+
+        match vault::version(client_version, version_secret, args.value).await {
+            Ok(result) => result,
+            Err(error) => panic!("Failed to version gcloud secret: {}", error),
         }
     }
 }
@@ -56,7 +72,7 @@ async fn build_client(profile: String) -> GcloudClient {
                 Err(error) => panic!("Failed to create gcloud client: {}", error),
             };
             let gcloud_client = GcloudClient {
-                profile: types::GcloudProfile::Test(String::from("cyderes-test")),
+                profile: types::GcloudProfile::Test(String::from("test")),
                 client,
             };
             gcloud_client
@@ -67,7 +83,7 @@ async fn build_client(profile: String) -> GcloudClient {
                 Err(error) => panic!("Failed to create gcloud client: {}", error),
             };
             let gcloud_client = GcloudClient {
-                profile: types::GcloudProfile::Dev(String::from("cyderes-dev")),
+                profile: types::GcloudProfile::Dev(String::from("dev")),
                 client,
             };
             gcloud_client
@@ -78,7 +94,7 @@ async fn build_client(profile: String) -> GcloudClient {
                 Err(error) => panic!("Failed to create gcloud client: {}", error),
             };
             let gcloud_client = GcloudClient {
-                profile: types::GcloudProfile::Prod(String::from("cyderes-prod")),
+                profile: types::GcloudProfile::Prod(String::from("prod")),
                 client,
             };
             gcloud_client
